@@ -1,0 +1,5 @@
+.terraform*
+terraform.tfstate*
+terraform.tfvars
+ca.crt
+config/backend.tf

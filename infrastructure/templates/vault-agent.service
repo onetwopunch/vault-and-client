@@ -1,0 +1,32 @@
+[Unit]
+Description="HashiCorp Vault"
+Documentation=https://www.vaultproject.io/docs/
+Requires=network-online.target
+After=network-online.target
+ConditionFileNotEmpty=/etc/vault/agent.hcl
+
+[Service]
+User=vault-agent
+Group=vault-agent
+# Ensures vault token is only readable by vault users
+UMask=0027
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+SecureBits=keep-caps
+Capabilities=CAP_IPC_LOCK+ep
+StandardError=syslog
+StandardOutput=syslog
+SyslogIdentifier=vault
+NoNewPrivileges=yes
+ExecStart=/bin/vault agent -config=/etc/vault/agent.hcl
+ExecReload=/bin/kill --signal HUP $MAINPID
+KillMode=process
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
