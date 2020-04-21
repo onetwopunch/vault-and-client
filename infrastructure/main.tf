@@ -24,16 +24,17 @@ locals {
 }
 
 module "vault" {
-  source = "github.com/terraform-google-modules/terraform-google-vault"
+  source  = "terraform-google-modules/vault/google"
+  version = "~>4.0"
 
   project_id                   = var.project_id
   region                       = var.region
   kms_keyring                  = var.kms_keyring
   network_subnet_cidr_range    = var.network_subnet_cidr_range
   ssh_allowed_cidrs            = [var.network_subnet_cidr_range]
-  vault_allowed_cidrs          = var.allowed_external_cidrs
   storage_bucket_force_destroy = true
   vault_version                = var.vault_version
+  load_balancing_scheme        = "INTERNAL"
 }
 
 module "iap_bastion" {
@@ -49,19 +50,19 @@ module "iap_bastion" {
 
   # Allows bastion to sign a JWT and verify it's identity.
   service_account_roles_supplemental = ["roles/iam.serviceAccountTokenCreator"]
-  
+
 
   startup_script = templatefile("${path.module}/templates/bastion-startup.sh", {
     vault_version = var.vault_version
     tf_version    = var.tf_version
     lb_ip         = module.vault.vault_addr
     vault_ca_cert = module.vault.ca_cert_pem[0]
-    
-    agent_config  = templatefile("${path.module}/templates/agent.hcl", {
-      vault_address = module.vault.vault_addr 
+
+    agent_config = templatefile("${path.module}/templates/agent.hcl", {
+      vault_address = module.vault.vault_addr
     })
 
-    vault_systemd = templatefile("${path.module}/templates/vault-agent.service", {}) 
+    vault_systemd = templatefile("${path.module}/templates/vault-agent.service", {})
   })
 }
 
@@ -86,14 +87,14 @@ resource "google_storage_bucket_iam_member" "vault_tf_state" {
   member = "serviceAccount:${module.iap_bastion.service_account}"
 }
 
-# Autogenerate the provider.tf file for the Vault config since we
+# Autogenerate the backend.tf file for the Vault config since we
 # cannot pass in buckets to backends in terraform
 resource "local_file" "provider" {
   count           = var.use_remote_state_vault ? 1 : 0
   filename        = "${path.module}/../config/backend.tf"
   file_permission = "0644"
-  
-  content = templatefile("${path.module}/templates/vault-state.tf", {
+
+  content = templatefile("${path.module}/templates/vault-backend.tf", {
     vault_addr = module.vault.vault_addr
     bucket     = google_storage_bucket.vault_tf_state[0].name
   })

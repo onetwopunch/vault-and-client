@@ -33,8 +33,8 @@ resource "vault_gcp_auth_backend_role" "gcp" {
 
 data "vault_policy_document" "admin" {
   rule {
-    path = "*"
+    path         = "*"
     capabilities = ["create", "read", "update", "delete", "list", "sudo"]
-    description = "Manage auth backends broadly across Vault"
+    description  = "Manage auth backends broadly across Vault"
   }
 }

@@ -29,8 +29,8 @@ variable "members" {
 
 variable "network_subnet_cidr_range" {
   description = "The CIDR range for the Vault network"
-  type = string
-  default = "10.127.0.0/20"
+  type        = string
+  default     = "10.127.0.0/20"
 }
 
 variable "kms_keyring" {
@@ -63,13 +63,13 @@ variable "tf_version" {
 }
 
 variable "allowed_external_cidrs" {
-  type = list
+  type        = list
   description = "The external CIDR ranges that should be able to access Vault"
-  default = []
+  default     = []
 }
 
 variable "use_remote_state_vault" {
-  type = bool
+  type        = bool
   description = "Whether to create a bucket and store a configuration file for Vault remote state"
-  default = true
+  default     = true
 }

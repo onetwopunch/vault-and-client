@@ -13,16 +13,16 @@
 # limitations under the License.
 #
 variable "cicd_project_id" {
-	type = string
-	description = "Project ID where the CICD service account should live"
+  type        = string
+  description = "Project ID where the CICD service account should live"
 }
 
 variable "admin_project_id" {
-	type = string
-	description = "Project where the admin service account lives, should probably be the Vault project itself."
+  type        = string
+  description = "Project where the admin service account lives, should probably be the Vault project itself."
 }
 
 variable "admin_service_account" {
-	type = string
-	description = "Service account email that will be able to administrate Vault (i.e. root level permissions)"
+  type        = string
+  description = "Service account email that will be able to administrate Vault (i.e. root level permissions)"
 }

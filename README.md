@@ -32,21 +32,6 @@ cd infrastructure
 terraform apply
 ```
 
-At this point nothing will have API access to Vault via the external load balancer. We want the bastion to
-but it's behind a NAT, so adding the private IP won't work. We have to add the NAT IPs for Vault (since
-the bastion is also in the Vault subnet) to the allowed CIDRs in the Vault module. This is only necessary
-until [this PR](https://github.com/terraform-google-modules/terraform-google-vault/pull/84) or something like
-is merged and we can just use an internal load balancer. In any case, you can grab the NAT IPs out of the
-terraform state after the first apply and add them to your tfvars file. Here's an easy `jq` oneliner to do
-this for you:
-
-```
-echo "allowed_external_cidrs = $(cat terraform.tfstate | jq '[.resources[] | select(.name == "vault-nat") | select(.type == "google_compute_address") | .instances[] | "\(.attributes.address)/32"]')" >> terraform.tfvars
-```
-
-Then simply run `terraform apply` again.
-
-
 ## Vault Configuration Deploy
 
 I've added some helper scripts in the Makefile to make development of Vault config easier.
@@ -68,8 +53,7 @@ The reason for this is we are using the vault agent as a systemd service, which 
 of this user so it's always logged in as the admin. There are obviously other ways of doing this that are more secure, but this
 method illustrates well how the vault agent can and should be configured.
 
-To run the initial terraform apply, you'll need to initialize vault and set the root token
-
+To run the initial terraform apply, you'll need to initialize vault and set the root token. You won't have to go through this every time you make a change to terraform.
 
 ```
 sudo -su vault-admin
@@ -78,18 +62,36 @@ cd /etc/vault/config
 vault operator init
 
 # This will output the root token
-export VAULT_TOKEN=[output from init command]
+vault login ROOT_TOKEN
 terraform apply
+
+# Remove the root token, which is currently logged in
+vault token revoke -self
+
+# Log out of vault-admin so you can use sudo
+exit
+
+# Restart the agent to pull a new token from GCE auth quicker
+sudo systemctl restart vault-agent
+
+# Log back in as vault-admin
+sudo -su vault-admin
+
+# You should now be logged in as the vault admin
+vault token lookup
+Key                 Value
+---                 -----
+...
+creation_ttl        1h
+display_name        gcp_admin-vault-bastion
+...
 ```
 
-As your infrastructure grows, you don't actually want the root token around (you can regenerate it later), so you can actually
-remove it once you're sure everything is setup properly. Some things to notice:
+Some things to notice:
 
 1. Assuming the systemd service (`systemctl status vault-agent`) is running, the vault agent should auto-authenticate as the admin and store the auth token `.vault-token` in the `vault-admin`'s home directory. i.e. `/opt/vault-admin/.vault-token` should exist
 2. If the systemd service isn't running, you can restart it with `sudo systemctl start vault-agent`
-3. If you `unset VAULT_TOKEN` you should be able to run `vault auth list` successfully since the `vault-admin` is now logged in
 
-Assuming all this is successful, you can remove the root token [following these instructions](https://www.vaultproject.io/docs/concepts/policies/#root-policy).
 
 Now as the vault admin you can run `make sync` from your local development environment as you make changes to the
 terraform config, then on the bastion, run:

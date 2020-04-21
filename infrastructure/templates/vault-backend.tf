@@ -18,3 +18,8 @@ terraform {
     prefix  = "terraform"
   }
 }
+
+provider "vault" {
+  address = "${vault_addr}"
+  ca_cert_file = "/etc/vault/ca.crt"
+}
